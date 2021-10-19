@@ -175,7 +175,6 @@ try:
             },
             "nonce": int(time.time() * 1000)
         }
-        # First ensure the params are alphabetically sorted by key
         paramString = ""
 
         if "params" in req:
