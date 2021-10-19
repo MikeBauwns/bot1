@@ -39,7 +39,6 @@ try:
 
 
     def testBuy():
-        print(SECRET_KEY)
         buySell = "BUY"
         USDT = getSummary("USDT")
         USDTBalance = USDT["result"]["accounts"][0]["balance"]
