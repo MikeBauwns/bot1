@@ -1,4 +1,5 @@
 # Import the requests library
+from ctypes import sizeof
 import requests
 import hmac
 import hashlib
@@ -10,32 +11,23 @@ from dotenv import load_dotenv
 load_dotenv()
 
 buySell = "Activating"
-API_KEY = "bVwYdrmNzDkDP82WU4fpcv"
+API_KEY = "YghNuUJvcKMZ9KQRe29V4n"
 SECRET_KEY = os.environ['BOTAPIS']
 cryptoURL = "https://api.crypto.com/v2/"
 # Define endpointq
 def startBot():
     testBuy()
 try:
-    endpoint = "https://api.taapi.io/bulk"
-
-    # Define a JSON body with parameters to be sent to the API
-    parameters = {
-        "secret": os.environ['TAAPI'],
-        "construct": {
-            "exchange": "binance",
-            "symbol": "XRP/USDT",
-            "interval": "5m",
-            "indicators": [
-                {
-                    "indicator": "candle"
-                },{
-                    "indicator": "macd",
-                    "optInSignalPeriod":30
-                }
-            ]
-        }
-    }
+    def getCandel():
+        
+        response = requests.get(cryptoURL + "public/get-candlestick?instrument_name=CRO_USDT&timeframe=5m")
+        data= response.json()
+        price_data=data["result"]["data"]
+        
+        size=len(price_data)
+        index = size-1
+        current_price=price_data[index]["c"]
+        return current_price
 
 
     def testBuy():
@@ -44,19 +36,24 @@ try:
         USDTBalance = USDT["result"]["accounts"][0]["balance"]
         if USDTBalance < 1.5:
             testSell()
-        response = requests.post(url=endpoint, json=parameters)
-        result = response.json()
+        result = getCandel()
+        file1 = open("soldAt.txt", "r")
+        strsold = file1.read()
+        soldAt=float(strsold)
+        file1.close()
 
-        candle = result["data"][0]["result"]["close"]
-        advice = result["data"][1]["result"]["valueMACDHist"]
-        if advice<=-0.0020:
+        if result<=soldAt-(soldAt*0.11):
+            print("test")
             file1 = open("stoploss.txt", "w")
             file1.write("0")
+            file1.close()
+            file1 = open("boughtAt.txt", "w")
+            file1.write(str(result))
             file1.close()
             file1 = open("takeprofit.txt", "r")
             check = file1.read()
             file1.close()
-            price = round(candle + (candle * 0.0025), 4)
+            price = round(result + (result * 0.01), 4)
             if price<float(check):
                 done=cancel()
                 oke= orderStop(buySell, USDTBalance, price)
@@ -64,35 +61,40 @@ try:
                 file2.write(str(price))
                 file2.close()
                 coins = USDTBalance / price
-                send(messages=["Bought " + str(coins) + " XRP for " + str(price) + "."])
+                send(messages=["Bought " + str(coins) + " CRO for " + str(price) + "."])
 
     def testSell():
         buySell = "SELL"
-        XRP = getSummary("XRP")
-        XRPBalance = XRP["result"]["accounts"][0]["balance"]
-        if XRPBalance < 1.5:
-            testBuy()
-        response = requests.post(url=endpoint, json=parameters)
-        result = response.json()
-        candle = result["data"][0]["result"]["close"]
-        advice = result["data"][1]["result"]["valueMACDHist"]
-        print(advice)
-        if advice>=0.0015 :
+        CRO = getSummary("CRO")
+        CROBalance = CRO["result"]["accounts"][0]["balance"]
+        
+        result = getCandel()
+        file1 = open("boughtAt.txt", "r")
+        strboughtAt = file1.read()
+        file1.close()
+
+        boughtAt=float(strboughtAt)
+
+        if result>=boughtAt+(boughtAt*0.11):
+            print('test')
             file1 = open("takeprofit.txt", "w")
             file1.write("1000000000")
+            file1.close()
+            file1 = open("soldAt.txt", "w")
+            file1.write(str(result))
             file1.close()
             file1 = open("stoploss.txt", "r")
             check = file1.read()
             file1.close()
-            price = round(candle - (candle * 0.0025), 4)
+            price = round(result - (result * 0.01), 4)
             if price>float(check):
                 done=cancel()
-                oke= orderStop(buySell, XRPBalance, price)
+                oke= orderStop(buySell, CROBalance, price)
                 file2 = open("stoploss.txt", "w")
                 file2.write(str(price))
                 file2.close()
-                money = (XRPBalance * price)
-                send(messages=["Sold " + str(XRPBalance) + " XRP for " + str(price) + ". Your balance is: " + str(money)])
+                money = (CROBalance * price)
+                send(messages=["Sold " + str(CROBalance) + " XRP for " + str(price) + ". Your balance is: " + str(money)])
 
 
 
@@ -134,7 +136,7 @@ try:
             "method": "private/create-order",
             "api_key": API_KEY,
             "params": {
-                "instrument_name": "XRP_USDT",
+                "instrument_name": "CRO_USDT",
                 "side": buySell,
                 "type": "MARKET",
                 "quantity": rCoins
@@ -167,7 +169,7 @@ try:
             "method": "private/create-order",
             "api_key": API_KEY,
             "params": {
-                "instrument_name": "XRP_USDT",
+                "instrument_name": "CRO_USDT",
                 "side": buySell,
                 "type": "STOP_LOSS",
                 "trigger_price": price,
@@ -200,7 +202,7 @@ try:
             "method": "private/cancel-all-orders",
             "api_key": API_KEY,
             "params": {
-                "instrument_name": "XRP_USDT"
+                "instrument_name": "CRO_USDT"
             },
             "nonce": int(time.time() * 1000)
         }
